@@ -3,92 +3,111 @@
   const cancelButtonEl = document.querySelector('.js-cancel-button');
   const apikeyEl = document.querySelector('.js-apikey');
   const modelEl = document.querySelector('.js-model');
-  const reasoningEl = document.querySelector('.js-reasoning');
   const roleEl = document.querySelector('.js-role');
-  const contentFieldEl = document.querySelector('.js-content-field');
+  const reasoningEl = document.querySelector('.js-reasoning');
+  const fileFieldEl = document.querySelector('.js-file-field');
   const replyFieldEl = document.querySelector('.js-reply-field');
   const spaceIdEl = document.querySelector('.js-space-id');
   const defaultModel = 'gpt-5.2';
   const defaultReasoning = 'none';
+  const legacyModelMap = {
+    'gpt-5.2-pro': 'gpt-5.2',
+    'gpt-5-pro': 'gpt-5.2',
+    'gpt-5.2-chat': 'gpt-5.2',
+    'gpt-5.2-chat-latest': 'gpt-5.2',
+    'gpt-5.1': 'gpt-5.2',
+    'gpt-5.1-chat': 'gpt-5.2',
+    'gpt-5.1-chat-latest': 'gpt-5.2',
+    'gpt-5-mini': 'gpt-5.2',
+    'gpt-5-nano': 'gpt-5.2'
+  };
+  const supportedModels = new Set(['gpt-5.2']);
   const baseReasoningOptions = ['none', 'low', 'medium', 'high', 'xhigh'];
-  const reasoningLimitsByModel = {
-    'gpt-5.2-pro': ['medium', 'high', 'xhigh'],
-    'gpt-5.1': ['none', 'low', 'medium', 'high'],
-    'gpt-5.1-chat-latest': ['none', 'low', 'medium', 'high']
+  const reasoningLabels = {
+    none: 'none（最小）',
+    xhigh: 'xhigh（最大）'
+  };
+  const normalizeModel = (model) => {
+    const normalized = legacyModelMap[model] || model || defaultModel;
+    if (!supportedModels.has(normalized)) return defaultModel;
+    return normalized;
+  };
+  const getAllowedReasoning = () => baseReasoningOptions;
+  const getDefaultReasoning = () => defaultReasoning;
+  const normalizeReasoningEffort = (model, effort) => {
+    const allowed = getAllowedReasoning(model);
+    const fallback = getDefaultReasoning(model);
+    const normalized = effort === 'minimal' ? 'none' : (effort || fallback);
+    if (allowed.includes(normalized)) return normalized;
+    if (allowed.includes(fallback)) return fallback;
+    return allowed[0];
+  };
+  const updateReasoningOptions = (model, effort) => {
+    const allowed = getAllowedReasoning(model);
+    reasoningEl.innerHTML = '';
+    allowed.forEach((value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = reasoningLabels[value] || value;
+      reasoningEl.appendChild(option);
+    });
+    reasoningEl.value = normalizeReasoningEffort(model, effort);
+    reasoningEl.disabled = allowed.length === 1;
   };
 
-  if (!formEl || !cancelButtonEl || !apikeyEl || !modelEl || !reasoningEl || !roleEl || !contentFieldEl || !replyFieldEl || !spaceIdEl) {
+  if (
+    !formEl ||
+    !cancelButtonEl ||
+    !apikeyEl ||
+    !modelEl ||
+    !roleEl ||
+    !reasoningEl ||
+    !fileFieldEl ||
+    !replyFieldEl ||
+    !spaceIdEl
+  ) {
     throw new Error('必須の要素が見つかりません。HTMLのクラス指定を確認してください。');
   }
 
-  /**
-   * Normalize reasoning effort for saved config and restrict to model capability.
-   * - map legacy "minimal" to "none"
-   * - fall back to default or first allowed value when invalid
-   */
-  const normalizeReasoningEffort = (model, effort) => {
-    const normalized = effort === 'minimal' ? 'none' : (effort || defaultReasoning);
-    const allowed = reasoningLimitsByModel[model] || baseReasoningOptions;
-    if (allowed.includes(normalized)) return normalized;
-    if (allowed.includes(defaultReasoning)) return defaultReasoning;
-    return allowed[0];
-  };
-
-  /**
-   * Disable/hide unsupported efforts for the selected model and select a valid one.
-   */
-  const syncReasoningOptions = (model, desiredEffort) => {
-    const allowed = reasoningLimitsByModel[model] || baseReasoningOptions;
-    Array.from(reasoningEl.options).forEach((option) => {
-      const isAllowed = allowed.includes(option.value);
-      option.disabled = !isAllowed;
-      option.hidden = !isAllowed;
-    });
-    const resolved = normalizeReasoningEffort(model, desiredEffort);
-    const target = reasoningEl.querySelector(`option[value="${resolved}"]`);
-    if (target) {
-      target.selected = true;
-    } else if (reasoningEl.options.length) {
-      reasoningEl.selectedIndex = 0;
-    }
-  };
-
   // 既存設定を反映
   const config = kintone.plugin.app.getConfig(PLUGIN_ID) || {};
-  const initialModel = config.model || defaultModel;
-  const initialReasoning = normalizeReasoningEffort(initialModel, config.reasoningEffort);
+  const initialModel = normalizeModel(config.model);
   apikeyEl.value = config.apikey || '';
-  const foundModel = modelEl.querySelector(`option[value="${initialModel}"]`);
-  if (foundModel) foundModel.selected = true;
+  modelEl.value = initialModel;
+  if (!modelEl.value) modelEl.value = defaultModel;
   roleEl.value = config.role || '';
-  contentFieldEl.value = config.contentField || '';
+  updateReasoningOptions(modelEl.value, config.reasoningEffort);
+  fileFieldEl.value = config.fileField || '';
   replyFieldEl.value = config.replyField || '';
   spaceIdEl.value = config.spaceId || '';
-  syncReasoningOptions(initialModel, initialReasoning);
 
   modelEl.addEventListener('change', () => {
-    syncReasoningOptions(modelEl.value || defaultModel, reasoningEl.value || defaultReasoning);
+    const normalized = normalizeModel(modelEl.value);
+    if (normalized !== modelEl.value) {
+      modelEl.value = normalized;
+    }
+    updateReasoningOptions(modelEl.value, reasoningEl.value);
   });
 
   formEl.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const selectedModel = modelEl.value || defaultModel;
-    const selectedReasoning = normalizeReasoningEffort(selectedModel, reasoningEl.value || defaultReasoning);
-
+    const selectedModel = normalizeModel((modelEl.value || defaultModel).trim());
+    const selectedReasoning = normalizeReasoningEffort(selectedModel, (reasoningEl.value || defaultReasoning).trim());
     const newConfig = {
       apikey: apikeyEl.value.trim(),
       model: selectedModel,
       reasoningEffort: selectedReasoning,
       role: roleEl.value.trim(),
-      contentField: contentFieldEl.value.trim(),
+      fileField: fileFieldEl.value.trim(),
       replyField: replyFieldEl.value.trim(),
       spaceId: spaceIdEl.value.trim()
     };
 
     const requiredFields = [
       { value: newConfig.apikey, label: 'APIキー' },
-      { value: newConfig.contentField, label: '入力フィールドコード' },
+      { value: newConfig.model, label: 'モデル' },
+      { value: newConfig.fileField, label: '添付ファイルフィールドコード' },
       { value: newConfig.replyField, label: '出力フィールドコード' },
       { value: newConfig.spaceId, label: 'スペースID' }
     ];
@@ -102,7 +121,6 @@
     kintone.plugin.app.setConfig(newConfig, () => {
       alert('設定が保存されました。アプリを更新してください。');
 
-      // Responses API 用のプロキシ設定
       const url = 'https://api.openai.com/v1/responses';
       const method = 'POST';
       const headers = {
@@ -110,7 +128,6 @@
         Authorization: 'Bearer ' + newConfig.apikey
       };
       const data = {};
-
       kintone.plugin.app.setProxyConfig(
         url,
         method,

@@ -28,8 +28,7 @@
     "required_params": [
       "apikey",
       "model",
-      "role",
-      "contentField",
+      "fileField",
       "replyField",
       "spaceId"
     ]
@@ -39,8 +38,8 @@
     "ja": "chatgpt-plugin"
   },
   "description": {
-    "en": "Plugin to use ChatGPT API in Kintone",
-    "ja": "ChatGPTAPIをkintioneで使うためのプラグイン"
+    "en": "Analyze attached images with the OpenAI Responses API and write results to a Kintone field",
+    "ja": "添付画像をOpenAI Responses APIで解析し、結果をkintoneのフィールドに出力するプラグイン"
   },
   "mobile": {
     "js": [

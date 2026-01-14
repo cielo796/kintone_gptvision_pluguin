@@ -1,0 +1,4 @@
+# Exclude private keys and related artifacts.
+*.ppk
+private.ppk
+private.ppk.bak

@@ -1,17 +1,13 @@
 <section class="settings">
   <header class="settings-hero">
-    <h2 class="settings-heading">OpenAI 最新モデル設定</h2>
-    <p class="kintoneplugin-desc">Responses APIに対応。最新のOpenAIモデル（GPT-5.2系）でレコード内容から回答を生成します。</p>
+    <h2 class="settings-heading">画像解析設定</h2>
+    <p class="kintoneplugin-desc">添付ファイルフィールドの画像をResponses APIで解析し、結果をテキストフィールドに出力します。</p>
     <div class="model-summary">
       <div class="badge badge-recommend">推奨</div>
       <div>
         <div class="model-name">gpt-5.2</div>
-        <div class="model-note">最新・標準。高品質なテキスト生成に最適。</div>
+        <div class="model-note">最新の標準モデル。画像解析に推奨。</div>
       </div>
-    </div>
-    <div class="model-summary muted">
-      <div class="model-name">gpt-5.2-pro</div>
-      <div class="model-note">より高性能な推論が必要なケース向け。</div>
     </div>
   </header>
 
@@ -28,31 +24,29 @@
         <label class="settings-label" for="model">モデル</label>
         <div class="settings-control">
           <select id="model" class="js-model kintoneplugin-input-text">
-            <option value="gpt-5.2">gpt-5.2（推奨）</option>
-            <option value="gpt-5.2-pro">gpt-5.2-pro</option>
-            <option value="gpt-5.1">gpt-5.1</option>
-            <option value="gpt-5.2-chat-latest">gpt-5.2-chat-latest</option>
-            <option value="gpt-5.1-chat-latest">gpt-5.1-chat-latest</option>
+            <optgroup label="GPT-5 系">
+              <option value="gpt-5.2">gpt-5.2（推奨）</option>
+            </optgroup>
           </select>
-          <div class="hint">Responses API対応モデルを選択してください（OpenAI OpenAPI spec v2.3.0より）。</div>
+          <div class="hint">モデルは gpt-5.2 のみ固定です。</div>
         </div>
 
-        <label class="settings-label" for="reasoningEffort">Thinking/Reasoning</label>
+        <label class="settings-label" for="reasoning">思考の強さ</label>
         <div class="settings-control">
-          <select id="reasoningEffort" class="js-reasoning kintoneplugin-input-text">
-            <option value="none">none（デフォルト）</option>
+          <select id="reasoning" class="js-reasoning kintoneplugin-input-text">
+            <option value="none">none（最小）</option>
             <option value="low">low</option>
             <option value="medium">medium</option>
             <option value="high">high</option>
-            <option value="xhigh">xhigh</option>
+            <option value="xhigh">xhigh（最大）</option>
           </select>
-          <div class="hint">Responses APIでは reasoning.effort を指定します。gpt-5.2 / gpt-5.1 のデフォルトは none。gpt-5.2-pro は medium・high・xhigh のみ対応、gpt-5.1 系は xhigh 非対応です。</div>
+          <div class="hint">モデルにより選択可能な値が異なります。対応しない場合は自動的に調整されます。</div>
         </div>
 
-        <label class="settings-label" for="role">システムプロンプト</label>
+        <label class="settings-label" for="role">システムプロンプト（任意）</label>
         <div class="settings-control">
-          <textarea id="role" class="js-role kintoneplugin-input-text" rows="4" placeholder="例：あなたはカスタマーサポート担当です。ユーザーの質問に簡潔に答えてください。"></textarea>
-          <div class="hint">AIの役割やトーンを指定します。未入力時は汎用アシスタントとして動作します。</div>
+          <textarea id="role" class="js-role kintoneplugin-input-text" rows="4" placeholder="例：画像の内容説明と文字抽出を日本語で行ってください。"></textarea>
+          <div class="hint">未入力時は画像解析用の既定プロンプトを使用します。</div>
         </div>
       </div>
     </div>
@@ -60,16 +54,16 @@
     <div class="settings-card">
       <h3 class="section-title">kintoneフィールド設定</h3>
       <div class="settings-grid">
-        <label class="settings-label" for="contentField">入力フィールドコード <span class="required">必須</span></label>
+        <label class="settings-label" for="fileField">添付ファイルフィールドコード <span class="required">必須</span></label>
         <div class="settings-control">
-          <input type="text" id="contentField" class="js-content-field kintoneplugin-input-text" placeholder="例：Inquiry">
-          <div class="hint">AIに渡す本文のフィールドコード。</div>
+          <input type="text" id="fileField" class="js-file-field kintoneplugin-input-text" placeholder="例：Attachment">
+          <div class="hint">画像が入っている添付ファイルフィールドコード。</div>
         </div>
 
         <label class="settings-label" for="replyField">出力フィールドコード <span class="required">必須</span></label>
         <div class="settings-control">
           <input type="text" id="replyField" class="js-reply-field kintoneplugin-input-text" placeholder="例：Answer">
-          <div class="hint">AIの回答を保存するフィールドコード。</div>
+          <div class="hint">解析結果を保存するテキスト（複数行）フィールドコード。</div>
         </div>
 
         <label class="settings-label" for="spaceId">スペースID <span class="required">必須</span></label>
