@@ -9,8 +9,13 @@
   margin-top: 0;
 }
 
-.kuc-mobile-button-1-17-0__button {
-  font-family: sans-serif;
-  margin-left: 12px;
+.plugin-space-action {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
 }
 
+.plugin-space-action .kuc-mobile-button-1-17-0__button {
+  font-family: sans-serif;
+  margin: 0;
+}

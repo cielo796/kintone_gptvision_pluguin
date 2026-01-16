@@ -217,7 +217,7 @@
     }
 
     const button = new Kuc.Button({
-      text: '画像を解析',
+      text: 'AIで画像を処理',
       type: 'submit',
       id: 'ai-image-button',
       className: 'js-openai-image-button',

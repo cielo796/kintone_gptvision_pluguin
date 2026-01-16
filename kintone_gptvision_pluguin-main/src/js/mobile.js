@@ -39,6 +39,7 @@
     '複数枚ある場合は、ファイル名を見出しにして順番に出力してください。',
     '回答はプレーンテキストのみで返してください。'
   ].join('\n');
+  const storagePrefix = 'aiGeneratedText';
   const rawModel = config.model || defaultModel;
   const safeModel = normalizeModel(rawModel);
   if (rawModel && safeModel !== rawModel) {
@@ -195,20 +196,64 @@
     return userContent;
   };
 
-  const buildEditUrl = () => {
-    const appId = kintone.mobile?.app?.getId ? kintone.mobile.app.getId() : kintone.app.getId();
-    const recordId = kintone.mobile?.app?.record?.getId
-      ? kintone.mobile.app.record.getId()
-      : kintone.app.record.getId();
-    if (!appId || !recordId) {
+  const storageKeyFor = (appId, recordId) => {
+    if (!appId || !recordId) return storagePrefix;
+    return `${storagePrefix}:${appId}:${recordId}`;
+  };
+
+  const safeStorage = {
+    get: (key) => {
+      try {
+        const value = sessionStorage.getItem(key);
+        if (value !== null) return value;
+      } catch (e) {}
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    },
+    set: (key, value) => {
+      try {
+        sessionStorage.setItem(key, value);
+      } catch (e) {}
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {}
+    },
+    remove: (key) => {
+      try {
+        sessionStorage.removeItem(key);
+      } catch (e) {}
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {}
+    }
+  };
+
+  const buildEditUrl = (appId, recordId) => {
+    const resolvedAppId =
+      appId ||
+      (kintone.mobile?.app?.getId ? kintone.mobile.app.getId() : (kintone.app?.getId ? kintone.app.getId() : null));
+    const resolvedRecordId =
+      recordId ||
+      (kintone.mobile?.app?.record?.getId
+        ? kintone.mobile.app.record.getId()
+        : (kintone.app?.record?.getId ? kintone.app.record.getId() : null));
+    if (!resolvedAppId || !resolvedRecordId) {
       return null;
     }
     const isMobile = location.pathname.includes('/k/m/');
-    const basePath = isMobile ? `/k/m/${appId}/show` : `/k/${appId}/show`;
+    const basePath = isMobile ? `/k/m/${resolvedAppId}/show` : `/k/${resolvedAppId}/show`;
     if (isMobile) {
-      return `${basePath}?record=${recordId}&mode=edit`;
+      const url = new URL(location.href);
+      url.pathname = basePath;
+      url.searchParams.set('record', resolvedRecordId);
+      url.searchParams.set('mode', 'edit');
+      url.hash = '';
+      return url.toString();
     }
-    return `${basePath}#record=${recordId}&mode=edit`;
+    return `${basePath}#record=${resolvedRecordId}&mode=edit`;
   };
 
   kintone.events.on('mobile.app.record.detail.show', function(event) {
@@ -217,6 +262,7 @@
       console.warn('スペースフィールドが見つかりません。', config.spaceId);
       return event;
     }
+    const detailRecordId = event.record?.$id?.value;
 
     if (spaceElement.querySelector('#ai-image-button')) {
       return event;
@@ -233,7 +279,7 @@
     }
 
     const button = new Kuc.MobileButton({
-      text: '画像を解析',
+      text: 'AIで画像を処理',
       type: 'submit',
       id: 'ai-image-button',
       className: 'js-openai-image-button',
@@ -245,11 +291,20 @@
       duration: -1
     });
 
-    spaceElement.appendChild(button);
+    const buttonWrapper = document.createElement('div');
+    buttonWrapper.className = 'plugin-space-action';
+    buttonWrapper.appendChild(button);
+    spaceElement.appendChild(buttonWrapper);
 
     button.addEventListener('click', async () => {
       button.disabled = true;
 
+      const appId = kintone.mobile?.app?.getId
+        ? kintone.mobile.app.getId()
+        : (kintone.app?.getId ? kintone.app.getId() : null);
+      const recordId = kintone.mobile?.app?.record?.getId
+        ? kintone.mobile.app.record.getId()
+        : (kintone.app?.record?.getId ? kintone.app.record.getId() : detailRecordId);
       const record = kintone.mobile.app.record.get();
       const files = record.record[config.fileField]?.value || [];
 
@@ -301,12 +356,13 @@
           throw new Error('AIの回答テキストが取得できませんでした。');
         }
 
-        sessionStorage.setItem('aiGeneratedText', aiText);
+        const storageKey = storageKeyFor(appId, recordId);
+        safeStorage.set(storageKey, aiText);
         notification.close();
 
-        const editUrl = buildEditUrl();
+        const editUrl = buildEditUrl(appId, recordId);
         if (editUrl) {
-          location.href = editUrl;
+          location.assign(editUrl);
         } else {
           notification.text = '解析が完了しました。編集画面で貼り付けてください。';
           setTimeout(() => notification.close(), 2000);
@@ -324,10 +380,20 @@
   });
 
   kintone.events.on(['mobile.app.record.edit.show', 'mobile.app.record.create.show'], function(event) {
-    const aiGeneratedText = sessionStorage.getItem('aiGeneratedText');
+    const appId = kintone.mobile?.app?.getId
+      ? kintone.mobile.app.getId()
+      : (kintone.app?.getId ? kintone.app.getId() : null);
+    const recordId = event.record?.$id?.value;
+    const storageKey = storageKeyFor(appId, recordId);
+    const legacyKey = storageKeyFor();
+    const aiGeneratedText = safeStorage.get(storageKey) || safeStorage.get(legacyKey);
     if (aiGeneratedText && config.replyField && event.record[config.replyField]) {
       event.record[config.replyField].value = aiGeneratedText;
-      sessionStorage.removeItem('aiGeneratedText');
+      safeStorage.remove(storageKey);
+      safeStorage.remove(legacyKey);
+      if (kintone.mobile?.app?.record?.set) {
+        kintone.mobile.app.record.set(event.record);
+      }
     }
     return event;
   });
