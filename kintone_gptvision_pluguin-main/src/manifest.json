@@ -34,12 +34,12 @@
     ]
   },
   "name": {
-    "en": "chatgpt-plugin",
-    "ja": "chatgpt-plugin"
+    "en": "kintoneVisionOCRプラグイン(OpenAIAPISupported)",
+    "ja": "kintone画像OCRプラグイン(OpenAI対応版)"
   },
   "description": {
-    "en": "Analyze attached images with the OpenAI Responses API and write results to a Kintone field",
-    "ja": "添付画像をOpenAI Responses APIで解析し、結果をkintoneのフィールドに出力するプラグイン"
+    "en": "Use the OpenAI Responses API to read attached images and write the result to a Kintone field.",
+    "ja": "添付画像をOpenAI Responses APIで解析し、読み取り結果をKintoneの指定フィールドに書き込むプラグイン。"
   },
   "mobile": {
     "js": [

@@ -249,8 +249,8 @@
       const url = new URL(location.href);
       url.pathname = basePath;
       url.searchParams.set('record', resolvedRecordId);
-      url.searchParams.set('mode', 'edit');
-      url.hash = '';
+      url.searchParams.delete('mode');
+      url.hash = 'mode=edit';
       return url.toString();
     }
     return `${basePath}#record=${resolvedRecordId}&mode=edit`;
@@ -391,9 +391,6 @@
       event.record[config.replyField].value = aiGeneratedText;
       safeStorage.remove(storageKey);
       safeStorage.remove(legacyKey);
-      if (kintone.mobile?.app?.record?.set) {
-        kintone.mobile.app.record.set(event.record);
-      }
     }
     return event;
   });
